@@ -1,4 +1,4 @@
-package com.decathlon.otel.demo.data.models
+package com.paligot.otel.demo.data.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

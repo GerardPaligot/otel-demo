@@ -1,6 +1,6 @@
-package com.decathlon.otel.demo.data
+package com.paligot.otel.demo.data
 
-import com.decathlon.otel.demo.data.models.EventList
+import com.paligot.otel.demo.data.models.EventList
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO

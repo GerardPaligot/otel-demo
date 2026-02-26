@@ -1,11 +1,10 @@
-package com.decathlon.otel.demo
+package com.paligot.otel.demo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.decathlon.otel.demo.data.ConferenceApi
-import com.decathlon.otel.demo.data.EventRepository
-import com.decathlon.otel.demo.data.models.EventItemList
+import com.paligot.otel.demo.data.EventRepository
+import com.paligot.otel.demo.data.models.EventItemList
 import kotlinx.coroutines.flow.*
 
 sealed class EventListUiState {

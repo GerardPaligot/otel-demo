@@ -1,6 +1,6 @@
-package com.decathlon.otel.demo.data
+package com.paligot.otel.demo.data
 
-import com.decathlon.otel.demo.data.models.EventItemList
+import com.paligot.otel.demo.data.models.EventItemList
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.trace.SpanKind
 import java.util.concurrent.TimeUnit

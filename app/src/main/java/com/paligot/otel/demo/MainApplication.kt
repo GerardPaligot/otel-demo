@@ -1,4 +1,4 @@
-package com.decathlon.otel.demo
+package com.paligot.otel.demo
 
 import android.app.Application
 import io.opentelemetry.api.OpenTelemetry

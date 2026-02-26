@@ -3,18 +3,17 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.jetbrains.compose.compiler)
 }
 
 android {
-    namespace = "com.decathlon.otel.demo"
+    namespace = "com.paligot.otel.demo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.decathlon.otel.demo"
+        applicationId = "com.paligot.otel.demo"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -26,9 +25,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-    }
-    buildFeatures {
-        compose = true
     }
     packaging {
         resources {

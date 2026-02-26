@@ -1,4 +1,4 @@
-package com.decathlon.otel.demo.ui.theme
+package com.paligot.otel.demo.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

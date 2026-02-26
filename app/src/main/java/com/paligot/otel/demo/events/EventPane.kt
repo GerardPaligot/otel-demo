@@ -1,4 +1,4 @@
-package com.decathlon.otel.demo.events
+package com.paligot.otel.demo.events
 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,8 +7,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import com.decathlon.otel.demo.EventListUiState
-import com.decathlon.otel.demo.MainViewModel
+import com.paligot.otel.demo.EventListUiState
+import com.paligot.otel.demo.MainViewModel
 
 @Composable
 fun EventPane(
