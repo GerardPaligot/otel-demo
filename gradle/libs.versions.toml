@@ -1,0 +1,60 @@
+[versions]
+agp = "8.13.2"
+androidx-activity = "1.12.4"
+jetbrains-androidx-navigation = "2.9.2"
+jetbrains-androidx-viewmodel = "2.9.6"
+jetbrains-compose = "1.10.1"
+jetbrains-material3 = "1.9.0"
+jetbrains-kotlin = "2.3.10"
+jetbrains-kotlinx-coroutines = "1.10.2"
+jetbrains-kotlinx-serialization = "1.10.0"
+io-ktor = "3.4.0"
+io-opentelemetry = "1.59.0"
+io-opentelemetry-semconv = "1.40.0"
+
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+jetbrains-androidx-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrains-androidx-navigation" }
+jetbrains-androidx-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jetbrains-androidx-viewmodel" }
+jetbrains-androidx-material3-compose = { module = "org.jetbrains.compose.material3:material3", version.ref = "jetbrains-material3" }
+jetbrains-kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "jetbrains-kotlinx-coroutines" }
+jetbrains-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "jetbrains-kotlinx-serialization" }
+io-ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "io-ktor" }
+io-ktor-client-json = { group = "io.ktor", name = "ktor-client-json", version.ref = "io-ktor" }
+io-ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "io-ktor" }
+io-ktor-client-serialization = { group = "io.ktor", name = "ktor-client-serialization", version.ref = "io-ktor" }
+io-ktor-client-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "io-ktor" }
+io-ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "io-ktor" }
+io-ktor-kotlinx-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "io-ktor" }
+io-opentelemetry-bom = { group = "io.opentelemetry", name = "opentelemetry-bom", version.ref = "io-opentelemetry" }
+io-opentelemetry-api = { group = "io.opentelemetry", name = "opentelemetry-api" }
+io-opentelemetry-sdk = { group = "io.opentelemetry", name = "opentelemetry-sdk" }
+io-opentelemetry-sdk-trace = { group = "io.opentelemetry", name = "opentelemetry-sdk-trace" }
+io-opentelemetry-semconv = { group = "io.opentelemetry.semconv", name = "opentelemetry-semconv", version.ref = "io-opentelemetry-semconv" }
+io-opentelemetry-exporter-logging = { group = "io.opentelemetry", name = "opentelemetry-exporter-logging" }
+io-opentelemetry-instrumentation-ktor = { group = "io.opentelemetry.instrumentation", name = "opentelemetry-ktor-3.0", version = "2.25.0-alpha" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrains-kotlin" }
+jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "jetbrains-compose" }
+jetbrains-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin" }
+jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin" }
+
+[bundles]
+io-ktor-client = [
+    "io-ktor-client-core",
+    "io-ktor-client-json",
+    "io-ktor-client-logging",
+    "io-ktor-client-serialization",
+    "io-ktor-client-negotiation",
+    "io-ktor-client-cio",
+    "io-ktor-kotlinx-serialization-json"
+]
+io-opentelemetry = [
+    "io-opentelemetry-api",
+    "io-opentelemetry-sdk",
+    "io-opentelemetry-sdk-trace",
+    "io-opentelemetry-semconv",
+    "io-opentelemetry-exporter-logging",
+]
