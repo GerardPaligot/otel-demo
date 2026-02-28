@@ -36,6 +36,7 @@ android {
 dependencies {
     implementation(libs.androidx.activity.compose)
 
+    implementation(libs.jetbrains.androidx.material.icons)
     implementation(libs.jetbrains.androidx.material3.compose)
     implementation(libs.jetbrains.androidx.viewmodel.compose)
     implementation(libs.jetbrains.androidx.navigation.compose)

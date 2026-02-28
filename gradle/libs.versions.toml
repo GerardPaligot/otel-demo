@@ -5,6 +5,7 @@ jetbrains-androidx-navigation = "2.9.2"
 jetbrains-androidx-viewmodel = "2.9.6"
 jetbrains-compose = "1.10.1"
 jetbrains-material3 = "1.9.0"
+jetbrains-material-icons = "1.7.3"
 jetbrains-kotlin = "2.3.10"
 jetbrains-kotlinx-coroutines = "1.10.2"
 jetbrains-kotlinx-serialization = "1.10.0"
@@ -17,6 +18,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 jetbrains-androidx-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrains-androidx-navigation" }
 jetbrains-androidx-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jetbrains-androidx-viewmodel" }
 jetbrains-androidx-material3-compose = { module = "org.jetbrains.compose.material3:material3", version.ref = "jetbrains-material3" }
+jetbrains-androidx-material-icons = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "jetbrains-material-icons" }
 jetbrains-kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "jetbrains-kotlinx-coroutines" }
 jetbrains-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "jetbrains-kotlinx-serialization" }
 io-ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "io-ktor" }
