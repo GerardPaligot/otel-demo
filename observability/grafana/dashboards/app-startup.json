@@ -1,0 +1,395 @@
+{
+  "title": "OTel Demo – App Startup Time",
+  "uid": "otel-demo-app-startup",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Cold Start SLO (< 1500ms)",
+      "description": "Percentage of cold starts with duration below 1500ms.",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "(sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"cold\" | line_format \"{{.duration}}\" | pattern \"<dur>\" | dur < 1500 [$__range])) or vector(0)) / sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"cold\" [$__range]))",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.9 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Warm Start SLO (< 500ms)",
+      "description": "Percentage of warm starts with duration below 500ms.",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "(sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"warm\" | line_format \"{{.duration}}\" | pattern \"<dur>\" | dur < 500 [$__range])) or vector(0)) / sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"warm\" [$__range]))",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.9 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Hot Start SLO (< 250ms)",
+      "description": "Percentage of hot starts with duration below 250ms.",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "(sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"hot\" | line_format \"{{.duration}}\" | pattern \"<dur>\" | dur < 250 [$__range])) or vector(0)) / sum(count_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | start_type=\"hot\" [$__range]))",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.9 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Startup Duration by Start Type",
+      "description": "Count and average startup duration grouped by start type (cold, warm, hot).",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\"",
+          "queryType": "range"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "keepTime": false,
+            "replace": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "duration", "destinationType": "number" }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "start_type": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "duration": {
+                "aggregations": ["count", "mean"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "duration (mean)" },
+            "properties": [{ "id": "unit", "value": "ms" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "duration (count)", "desc": true }]
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Startup Duration over Time",
+      "description": "Startup duration plotted over time, colored by start type (cold, warm, hot).",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "avg_over_time({service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\" | unwrap duration | __error__=\"\" [30s]) by (start_type)",
+          "queryType": "range",
+          "legendFormat": "{{start_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "pointSize": 6,
+            "showPoints": "always",
+            "lineWidth": 1,
+            "lineInterpolation": "linear",
+            "spanNulls": true
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "All Startup Events",
+      "description": "All startup log entries emitted during the selected time range.",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\"",
+          "queryType": "range"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "keepTime": true,
+            "replace": true
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "includeByName": {
+              "Time": true,
+              "start_type": true,
+              "duration": true
+            },
+            "renameByName": {
+              "start_type": "Start Type",
+              "duration": "Duration (ms)"
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Time", "desc": true }],
+        "footer": { "show": true, "reducer": ["count"], "countRows": true }
+      }
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Startup Duration by App Version",
+      "description": "Count and average startup duration grouped by app version.",
+      "gridPos": { "x": 0, "y": 36, "w": 12, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\"",
+          "queryType": "range"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "keepTime": false,
+            "replace": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "duration", "destinationType": "number" }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "app_version": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "duration": {
+                "aggregations": ["count", "mean"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "duration (mean)" },
+            "properties": [{ "id": "unit", "value": "ms" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "duration (count)", "desc": true }]
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Startup Duration by API Level",
+      "description": "Count and average startup duration grouped by device API level.",
+      "gridPos": { "x": 12, "y": 36, "w": 12, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"com.paligot.otel-demo\"} | scope_name=\"AppStartupLifecycle\"",
+          "queryType": "range"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "keepTime": false,
+            "replace": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "duration", "destinationType": "number" }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "device_api_level": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "duration": {
+                "aggregations": ["count", "mean"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "duration (mean)" },
+            "properties": [{ "id": "unit", "value": "ms" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "duration (count)", "desc": true }]
+      }
+    }
+  ]
+}

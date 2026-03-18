@@ -1,0 +1,214 @@
+{
+  "title": "OTel Demo – HTTP Client Performance",
+  "uid": "otel-demo-http-client",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Requests under 500ms",
+      "description": "Number of outgoing HTTP client spans whose duration is below 500 milliseconds.",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "{ kind = client && span.http.request.method != nil && duration < 500ms }"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": ["count"],
+            "includeTimeField": false
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Requests over 500ms",
+      "description": "Number of outgoing HTTP client spans whose duration is 500 milliseconds or above.",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "{ kind = client && span.http.request.method != nil && duration >= 500ms }"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": ["count"],
+            "includeTimeField": false
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "HTTP 5xx Count",
+      "description": "Number of outgoing HTTP client spans with a 5xx response status code.",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "{ kind = client && span.http.response.status_code >= 500 }"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": ["count"],
+            "includeTimeField": false
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 1,
+      "type": "table",
+      "title": "HTTP Calls by Method",
+      "description": "Count, average duration, and maximum duration of outgoing HTTP client spans grouped by HTTP method.",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 9 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "{ kind = client && span.http.request.method != nil } | select(span.http.request.method, duration)",
+          "limit": 100,
+          "tableType": "spans",
+          "spss": 10
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "http.request.method": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "duration": {
+                "aggregations": ["count", "mean", "max"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "duration (mean)" },
+            "properties": [{ "id": "unit", "value": "ns" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "duration (max)" },
+            "properties": [{ "id": "unit", "value": "ns" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "duration (count)", "desc": true }]
+      }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "All HTTP Client Traces",
+      "description": "All outgoing HTTP client spans in the selected time range. Click to inspect URL, status code, and parent relationships.",
+      "gridPos": { "x": 0, "y": 15, "w": 24, "h": 11 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "{ kind = client && span.http.request.method != nil }",
+          "limit": 50
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Start time", "desc": true }],
+        "footer": { "show": true, "reducer": ["count"], "countRows": true }
+      }
+    }
+  ]
+}
