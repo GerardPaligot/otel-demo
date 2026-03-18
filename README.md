@@ -1,20 +1,47 @@
-# Otel Http Demo
+# OTel Demo
 
-Show that orchestration applied on http calls with OkHttp v3.0 from OpenTelemetry Instrumentation,
-create isolated span.
+An Android demo app showcasing multi-signal OpenTelemetry instrumentation with a local observability stack.
 
-# Instrumentation
+## App
 
-* OpenTelemetry is created only one time in [application class](https://github.com/GerardPaligot/otel-demo/blob/main/app/src/main/java/com/decathlon/otel/demo/MainApplication.kt#L23-L36).
-* `EventRepository` class is instrumented with a [custom span and a dedicated Tracer](https://github.com/GerardPaligot/otel-demo/blob/main/app/src/main/java/com/decathlon/otel/demo/data/EventRepository.kt#L13-L30).
-* ktor is configured with [OkHttp client](https://github.com/GerardPaligot/otel-demo/blob/main/app/src/main/java/com/decathlon/otel/demo/data/ConferenceApi.kt#L27-L32) and instrumented with [OkHttp v3 OpenTelemetry](https://github.com/open-telemetry/opentelemetry-java-instrumentation/tree/main/instrumentation/okhttp/okhttp-3.0/library).
+A Jetpack Compose conference app with 4 screens (Schedule, Speakers, Sponsors, Website), built with Ktor, Hilt and Coil.
 
-## Logs
+## Instrumentation
 
-```bash
-10:10:51.198  I  'HTTP GET' : 4ffc9e339210e71773a9dadf078cb166 ad1f4aa76ac095c3 CLIENT [tracer: io.opentelemetry.okhttp-3.0:1.22.0-alpha] AttributesMap{data={http.status_code=200, http.url=https://cms4partners-ce427.nw.r.appspot.com/events, http.method=GET, http.response_content_length=275, net.peer.name=cms4partners-ce427.nw.r.appspot.com, net.transport=ip_tcp, http.user_agent=Ktor client, http.flavor=2.0}, capacity=128, totalAddedValues=8}
-10:10:51.221  I  'fetch-events' : cfba3500c76a78e1dffa5527a1d47dba 85bbba1bbf3c8a66 CLIENT [tracer: event-repository:] {}
-```
+| Signal | What | How |
+|--------|------|-----|
+| Traces | HTTP client calls | Ktor auto-instrumentation via `KtorClientTelemetry` |
+| Traces | App startup (cold/warm/hot) | `ApplicationStartInfo` (API 35+) in `AppStartupLifecycle` |
+| Traces | Jank frames | `OnFrameMetricsAvailableListener` in `JankDetectionLifecycle` |
+| Traces | WebView page loads | `WebViewClient` callbacks in `WebsiteViewModel` |
+| Traces | Data loading | Custom spans in repositories and ViewModels |
+| Logs | Startup metrics | Structured log with type, duration, app version, API level |
+
+All telemetry is exported via OTLP to a local OpenTelemetry Collector.
+
+## Observability Stack
+
+Started with `docker compose up`:
+
+| Service | Image | Port |
+|---------|-------|------|
+| OTel Collector | `otel/opentelemetry-collector-contrib:0.123.0` | 4317 (gRPC), 4318 (HTTP) |
+| Tempo | `grafana/tempo:2.7.2` | 3200 |
+| Loki | `grafana/loki:3.5.0` | 3100 |
+| Grafana | `grafana/grafana:11.6.0` | 3000 |
+
+The Android app sends data to `http://10.0.2.2:4318` (emulator) — update to your LAN IP for a physical device.
+
+## Grafana Dashboards
+
+Four pre-provisioned dashboards at [http://localhost:3000](http://localhost:3000):
+
+- **App Startup Time** — Cold/warm/hot start SLOs and duration breakdown
+- **HTTP Client Performance** — Request counts, durations and error rates
+- **Jank Detection** — Janky frames by screen, duration distribution
+- **WebView Page Load** — Page load times and URL tracking
+
+See [observability/OBSERVABILITY.md](observability/OBSERVABILITY.md) for setup details.
 
 ## License
 
