@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.WorkspacePremium
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,14 +36,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import androidx.navigation.NavController
 import com.paligot.otel.demo.schedules.AppBottomBar
 import com.paligot.otel.demo.schedules.BottomNavItem
@@ -53,6 +56,7 @@ enum class SponsorTier(val label: String) {
     PLATINUM("Platinum Sponsors"),
     GOLD("Gold Sponsors"),
     SILVER("Silver Sponsors"),
+    BRONZE("Bronze Sponsors"),
 }
 
 data class SponsorUi(
@@ -62,6 +66,7 @@ data class SponsorUi(
     val logoColor: Color,
     val logoTextColor: Color = Color.White,
     val websiteUrl: String = "",
+    val logoUrl: String = "",
 )
 
 // ── Sample data ───────────────────────────────────────────────────────────────
@@ -75,7 +80,7 @@ data class SponsorUi(
 fun SponsorsScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: SponsorsViewModel = viewModel(),
+    viewModel: SponsorsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -83,31 +88,11 @@ fun SponsorsScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navController.navigate(BottomNavItem.SCHEDULE.route) {
-                            launchSingleTop = true
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
                 title = {
                     Text(
                         text = "Our Sponsors",
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     )
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "Info",
-                        )
-                    }
                 },
             )
         },
@@ -117,73 +102,121 @@ fun SponsorsScreen(
             )
         },
     ) { innerPadding ->
-        LazyColumn(
-            contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(0.dp),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            // Search
-            item {
-                SponsorSearchBar(
-                    query = uiState.searchQuery,
-                    onQueryChange = { viewModel.onSearchQueryChange(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            // Platinum cards — full width stacked
-            items(uiState.platinumSponsors) { sponsor ->
-                PlatinumSponsorCard(
-                    sponsor = sponsor,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                )
-            }
-
-            // Gold tier
-            if (uiState.goldSponsors.isNotEmpty()) {
-                item {
-                    TierHeader(
-                        label = SponsorTier.GOLD.label,
-                        icon = { Icon(Icons.Outlined.Star, null, tint = Color(0xFFFFC107)) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
+        when {
+            uiState.isLoading -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    CircularProgressIndicator()
                 }
-                item {
-                    TwoColumnGrid(
-                        sponsors = uiState.goldSponsors,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+            }
+            uiState.error != null -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    Text(
+                        text = "Failed to load sponsors\n${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp),
                     )
                 }
             }
+            else -> {
+                LazyColumn(
+                    contentPadding = innerPadding,
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // Search
+                    item {
+                        SponsorSearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.onSearchQueryChange(it) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
 
-            // Silver tier
-            if (uiState.silverSponsors.isNotEmpty()) {
-                item {
-                    TierHeader(
-                        label = SponsorTier.SILVER.label,
-                        icon = {
-                            Icon(
-                                Icons.Outlined.WorkspacePremium,
-                                null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Platinum cards — full width stacked
+                    items(uiState.platinumSponsors) { sponsor ->
+                        PlatinumSponsorCard(
+                            sponsor = sponsor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                        )
+                    }
+
+                    // Gold tier
+                    if (uiState.goldSponsors.isNotEmpty()) {
+                        item {
+                            TierHeader(
+                                label = SponsorTier.GOLD.label,
+                                icon = { Icon(Icons.Outlined.Star, null, tint = Color(0xFFFFC107)) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             )
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
-                }
-                item {
-                    ThreeColumnGrid(
-                        sponsors = uiState.silverSponsors,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                        }
+                        item {
+                            TwoColumnGrid(
+                                sponsors = uiState.goldSponsors,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    // Silver tier
+                    if (uiState.silverSponsors.isNotEmpty()) {
+                        item {
+                            TierHeader(
+                                label = SponsorTier.SILVER.label,
+                                icon = {
+                                    Icon(
+                                        Icons.Outlined.WorkspacePremium,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            )
+                        }
+                        item {
+                            ThreeColumnGrid(
+                                sponsors = uiState.silverSponsors,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    // Bronze tier
+                    if (uiState.bronzeSponsors.isNotEmpty()) {
+                        item {
+                            TierHeader(
+                                label = SponsorTier.BRONZE.label,
+                                icon = {
+                                    Icon(
+                                        Icons.Outlined.WorkspacePremium,
+                                        null,
+                                        tint = Color(0xFFCD7F32),
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            )
+                        }
+                        item {
+                            ThreeColumnGrid(
+                                sponsors = uiState.bronzeSponsors,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
@@ -259,12 +292,23 @@ private fun PlatinumSponsorCard(
                     .height(180.dp)
                     .background(MaterialTheme.colorScheme.surface),
             ) {
-                SponsorLogo(
-                    name = sponsor.name,
-                    color = sponsor.logoColor,
-                    textColor = sponsor.logoTextColor,
-                    size = 100.dp,
-                )
+                if (sponsor.logoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = sponsor.logoUrl,
+                        contentDescription = sponsor.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    )
+                } else {
+                    SponsorLogo(
+                        name = sponsor.name,
+                        color = sponsor.logoColor,
+                        textColor = sponsor.logoTextColor,
+                        size = 100.dp,
+                    )
+                }
             }
             // Footer
             Row(
@@ -349,12 +393,23 @@ private fun GoldSponsorCard(
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surface),
             ) {
-                SponsorLogo(
-                    name = sponsor.name,
-                    color = sponsor.logoColor,
-                    textColor = sponsor.logoTextColor,
-                    size = 60.dp,
-                )
+                if (sponsor.logoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = sponsor.logoUrl,
+                        contentDescription = sponsor.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                    )
+                } else {
+                    SponsorLogo(
+                        name = sponsor.name,
+                        color = sponsor.logoColor,
+                        textColor = sponsor.logoTextColor,
+                        size = 60.dp,
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -425,12 +480,23 @@ private fun SilverSponsorCard(
                 .aspectRatio(1f)
                 .background(sponsor.logoColor),
         ) {
-            Text(
-                text = sponsor.name.take(6),
-                style = MaterialTheme.typography.labelSmall,
-                color = sponsor.logoTextColor.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
-            )
+            if (sponsor.logoUrl.isNotBlank()) {
+                AsyncImage(
+                    model = sponsor.logoUrl,
+                    contentDescription = sponsor.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                )
+            } else {
+                Text(
+                    text = sponsor.name.take(6),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = sponsor.logoTextColor.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

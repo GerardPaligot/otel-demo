@@ -2,84 +2,31 @@ package com.paligot.otel.demo.speakers
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.paligot.otel.demo.BuildConfig
+import com.paligot.otel.demo.data.AgendaRepository
+import com.paligot.otel.demo.data.models.AgendaResponse
+import com.paligot.otel.demo.otel.span
+import com.paligot.otel.demo.otel.suspendSpan
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-
-// ── Sample data ───────────────────────────────────────────────────────────────
-
-private val defaultSpeakers = listOf(
-    SpeakerUi(
-        name = "Alice Johnson",
-        role = "CTO",
-        company = "TechCorp",
-        topics = listOf("Keynote", "Leadership"),
-        isFeatured = true,
-        featuredCategory = "Keynote",
-        avatarColor = Color(0xFF5C6BC0),
-    ),
-    SpeakerUi(
-        name = "Bob Smith",
-        role = "VP Eng",
-        company = "SoftSys",
-        topics = listOf("Keynote", "Engineering"),
-        isFeatured = true,
-        featuredCategory = "Keynote",
-        avatarColor = Color(0xFF1565C0),
-    ),
-    SpeakerUi(
-        name = "Charlie Brown",
-        role = "Founder",
-        company = "StartupX",
-        topics = listOf("Keynote"),
-        isFeatured = true,
-        featuredCategory = "Keynote",
-        avatarColor = Color(0xFF283593),
-    ),
-    SpeakerUi(
-        name = "David Miller",
-        role = "Product Designer",
-        company = "CreativeFlow",
-        topics = listOf("UX/UI", "Design Systems"),
-        avatarColor = Color(0xFF2E7D32),
-    ),
-    SpeakerUi(
-        name = "Elena Rodriguez",
-        role = "Senior AI Researcher",
-        company = "OpenAI",
-        topics = listOf("Machine Learning"),
-        avatarColor = Color(0xFF880E4F),
-    ),
-    SpeakerUi(
-        name = "Frank Wright",
-        role = "DevOps Lead",
-        company = "CloudScale",
-        topics = listOf("Kubernetes", "AWS"),
-        avatarColor = Color(0xFFE65100),
-    ),
-    SpeakerUi(
-        name = "Grace Hopper",
-        role = "Software Architect",
-        company = "LegacySys",
-        topics = listOf("Architecture"),
-        avatarColor = Color(0xFF6A1B9A),
-    ),
-    SpeakerUi(
-        name = "Henry Ford",
-        role = "Automotive Engineer",
-        company = "AutoMotive",
-        topics = listOf("Manufacturing"),
-        avatarColor = Color(0xFF37474F),
-    ),
-)
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 // ── UI state ──────────────────────────────────────────────────────────────────
 
 data class SpeakersUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null,
     val searchQuery: String = "",
-    val allSpeakers: List<SpeakerUi> = defaultSpeakers,
-    val bookmarkedNames: Set<String> = defaultSpeakers.filter { it.isBookmarked }.map { it.name }.toSet(),
+    val allSpeakers: List<SpeakerUi> = emptyList(),
+    val bookmarkedNames: Set<String> = emptySet(),
 ) {
     val featuredSpeakers: List<SpeakerUi>
         get() = allSpeakers.filter { it.isFeatured }
@@ -94,20 +41,110 @@ data class SpeakersUiState(
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-class SpeakersViewModel : ViewModel() {
+@HiltViewModel
+class SpeakersViewModel @Inject constructor(
+    private val openTelemetry: OpenTelemetry,
+    private val repository: AgendaRepository,
+) : ViewModel() {
+
+    private val tracer = openTelemetry.getTracer("speakers-viewmodel")
 
     private val _uiState = MutableStateFlow(SpeakersUiState())
     val uiState: StateFlow<SpeakersUiState> = _uiState.asStateFlow()
 
+    init {
+        loadAgenda(BuildConfig.EVENT_ID)
+    }
+
+    private fun loadAgenda(eventSlug: String) {
+        viewModelScope.launch {
+            tracer.suspendSpan(
+                name = "speakers.load",
+                attributes = Attributes.of(
+                    AttributeKey.stringKey("event.slug"), eventSlug
+                ),
+            ) {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+                val agenda = repository.agenda(eventSlug)
+                val speakers = mapSpeakers(agenda)
+                _uiState.update { it.copy(isLoading = false, allSpeakers = speakers) }
+            }
+        }
+    }
+
     fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        tracer.span(
+            name = "speakers.search",
+            attributes = Attributes.of(
+                AttributeKey.stringKey("search.query"), query,
+            ),
+        ) {
+            _uiState.update { it.copy(searchQuery = query) }
+        }
     }
 
     fun toggleBookmark(name: String) {
-        _uiState.update { state ->
-            val updated = state.bookmarkedNames.toMutableSet()
-            if (!updated.add(name)) updated.remove(name)
-            state.copy(bookmarkedNames = updated)
+        tracer.span(
+            name = "speakers.toggleBookmark",
+            attributes = Attributes.of(
+                AttributeKey.stringKey("speaker.name"), name,
+            ),
+        ) {
+            _uiState.update { state ->
+                val updated = state.bookmarkedNames.toMutableSet()
+                if (!updated.add(name)) updated.remove(name)
+                state.copy(bookmarkedNames = updated)
+            }
+        }
+    }
+
+    // ── Mapping ───────────────────────────────────────────────────────────────
+
+    private val avatarColors = listOf(
+        Color(0xFF5C6BC0), Color(0xFF1565C0), Color(0xFF283593), Color(0xFF2E7D32),
+        Color(0xFF880E4F), Color(0xFFE65100), Color(0xFF6A1B9A), Color(0xFF37474F),
+        Color(0xFFAD1457), Color(0xFF00695C), Color(0xFF4E342E), Color(0xFF0277BD),
+    )
+
+    private fun avatarColor(name: String): Color =
+        avatarColors[Math.abs(name.hashCode()) % avatarColors.size]
+
+    private fun mapSpeakers(agenda: AgendaResponse): List<SpeakerUi> {
+        val categoryNameById = agenda.categories.associateBy({ it.id }, { it.name })
+
+        val keynoteSessionIds = agenda.sessions
+            .filter { s ->
+                categoryNameById[s.categoryId]?.equals("Keynote", ignoreCase = true) == true
+            }
+            .map { it.id }
+            .toSet()
+
+        val featuredSpeakerIds = agenda.sessions
+            .filter { it.id in keynoteSessionIds }
+            .flatMap { it.speakers }
+            .toSet()
+
+        val speakerTopics: Map<String, List<String>> = buildMap {
+            agenda.sessions.forEach { session ->
+                val catName = categoryNameById[session.categoryId] ?: return@forEach
+                session.speakers.forEach { speakerId ->
+                    @Suppress("UNCHECKED_CAST")
+                    (getOrPut(speakerId) { mutableListOf<String>() } as MutableList<String>).add(catName)
+                }
+            }
+        }
+
+        return agenda.speakers.map { s ->
+            SpeakerUi(
+                name = s.displayName,
+                role = s.jobTitle ?: "",
+                company = s.company ?: "",
+                topics = speakerTopics[s.id]?.distinct() ?: emptyList(),
+                isFeatured = s.id in featuredSpeakerIds,
+                featuredCategory = if (s.id in featuredSpeakerIds) "Keynote" else "",
+                avatarColor = avatarColor(s.displayName),
+                photoUrl = s.photoUrl.orEmpty(),
+            )
         }
     }
 }

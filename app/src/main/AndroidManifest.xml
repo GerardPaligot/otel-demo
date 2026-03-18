@@ -13,6 +13,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Oteldemo"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
             android:name="com.paligot.otel.demo.MainActivity"

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.jetbrains.compose.compiler)
+    alias(libs.plugins.google.hilt)
+    alias(libs.plugins.google.ksp)
 }
 
 android {
@@ -22,6 +24,20 @@ android {
             useSupportLibrary = true
         }
     }
+    buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "BASE_URL_OTEL_COLLECTOR", "\"http://10.0.2.2:4318\"")
+            buildConfigField("String", "EVENT_ID", "\"81ed9849-7a70-4429-91e0-6409440fd80d\"")
+            buildConfigField("String", "EVENT_URL", "\"devlille.fr\"")
+        }
+        release {
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "BASE_URL_OTEL_COLLECTOR", "\"http://10.0.2.2:4318\"")
+            buildConfigField("String", "EVENT_ID", "\"81ed9849-7a70-4429-91e0-6409440fd80d\"")
+            buildConfigField("String", "EVENT_URL", "\"devlille.fr\"")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -31,10 +47,17 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
     implementation(libs.androidx.activity.compose)
+
+    implementation(libs.google.hilt.android)
+    ksp(libs.google.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.jetbrains.androidx.material.icons)
     implementation(libs.jetbrains.androidx.material3.compose)
@@ -43,6 +66,8 @@ dependencies {
     implementation(libs.jetbrains.kotlinx.coroutines)
     implementation(libs.jetbrains.kotlinx.serialization.json)
 
+    implementation(libs.io.coil.compose)
+    implementation(libs.io.coil.network.ktor)
     implementation(libs.bundles.io.ktor.client)
 
     implementation(platform(libs.io.opentelemetry.bom))

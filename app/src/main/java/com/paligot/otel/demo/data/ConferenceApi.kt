@@ -1,6 +1,9 @@
 package com.paligot.otel.demo.data
 
+import com.paligot.otel.demo.data.models.AgendaResponse
+import com.paligot.otel.demo.data.models.Event
 import com.paligot.otel.demo.data.models.EventList
+import com.paligot.otel.demo.data.models.PartnerResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -10,6 +13,7 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.json
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.instrumentation.ktor.v3_0.KtorClientTelemetry
@@ -20,6 +24,18 @@ class ConferenceApi(
     private val baseUrl: String
 ) {
     suspend fun fetchEventList(): EventList = client.get("$baseUrl/events").body()
+
+    suspend fun fetchEvent(eventSlug: String): Event = client.get("$baseUrl/events/$eventSlug") {
+        header("Accept", "application/json; version=3")
+    }.body()
+
+    suspend fun fetchAgenda(eventSlug: String): AgendaResponse =
+        client.get("$baseUrl/events/$eventSlug/agenda") {
+            header("Accept", "application/json; version=4")
+        }.body()
+
+    suspend fun fetchPartners(eventSlug: String): Map<String, List<PartnerResponse>> =
+        client.get("$baseUrl/events/$eventSlug/partners").body()
 
     companion object {
         fun create(telemetry: OpenTelemetry, baseUrl: String, enableNetworkLogs: Boolean): ConferenceApi =

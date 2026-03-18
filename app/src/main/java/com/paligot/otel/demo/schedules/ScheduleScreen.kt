@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -30,19 +31,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -93,13 +96,18 @@ enum class TrackCategory(
     ),
 }
 
+data class SpeakerSummaryUi(
+    val name: String,
+    val photoUrl: String = "",
+)
+
 data class SessionUi(
     val title: String,
     val abstract: String,
     val room: String,
     val duration: String,
     val category: TrackCategory,
-    val speakers: List<String>,
+    val speakers: List<SpeakerSummaryUi>,
     val isFavorite: Boolean = false,
 )
 
@@ -115,6 +123,7 @@ data class CalendarDay(
     val dayAbbr: String,
     val dayNumber: Int,
     val isSelected: Boolean = false,
+    val date: String = "",
 )
 
 enum class BottomNavItem(
@@ -122,10 +131,10 @@ enum class BottomNavItem(
     val icon: ImageVector,
     val route: String,
 ) {
-    HOME("Home", Icons.Outlined.Home, "home"),
     SCHEDULE("Schedule", Icons.Outlined.CalendarMonth, "schedule"),
     SPEAKERS("Speakers", Icons.Outlined.Person, "speakers"),
     SPONSORS("Sponsors", Icons.Outlined.Sell, "sponsors"),
+    WEBSITE("Website", Icons.Outlined.Language, "website"),
 }
 
 // ── Sample data ───────────────────────────────────────────────────────────────
@@ -139,7 +148,7 @@ enum class BottomNavItem(
 fun ScheduleScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: ScheduleViewModel = viewModel(),
+    viewModel: ScheduleViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -153,14 +162,6 @@ fun ScheduleScreen(
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     )
                 },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                        )
-                    }
-                },
             )
         },
         bottomBar = {
@@ -169,55 +170,81 @@ fun ScheduleScreen(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            CalendarStrip(
-                month = uiState.month,
-                days = uiState.calendarDays,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TrackFilterRow(
-                tracks = uiState.allTracks,
-                selectedTrack = uiState.selectedTrack,
-                onTrackSelected = { viewModel.selectTrack(it) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            ) {
-                uiState.filteredTimeSlots.forEach { slot ->
-                    item {
-                        Text(
-                            text = slot.time.ifBlank { "" },
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-                        )
-                    }
-                    if (slot.isBreak) {
-                        item {
-                            LunchBreakItem(
-                                label = slot.breakLabel,
-                                duration = slot.breakDuration,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    } else {
-                        items(slot.sessions) { session ->
-                            ScheduleItem(
-                                title = session.title,
-                                abstract = session.abstract,
-                                room = session.room,
-                                time = session.duration,
-                                category = session.category.label,
-                                categoryContainerColor = session.category.containerColor,
-                                categoryContentColor = session.category.contentColor,
-                                borderColor = session.category.borderColor,
-                                speakers = session.speakers,
-                                isFavorite = uiState.favoriteTitles.contains(session.title),
-                                onFavoriteClick = { viewModel.toggleFavorite(session.title) },
-                                onClick = {},
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+        when {
+            uiState.isLoading -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            uiState.error != null -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    Text(
+                        text = "Failed to load schedule\n${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
+            else -> {
+                Column(modifier = Modifier.padding(innerPadding)) {
+                    CalendarStrip(
+                        month = uiState.month,
+                        days = uiState.calendarDays,
+                        onDayClick = { viewModel.selectDate(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    TrackFilterRow(
+                        tracks = uiState.allTracks,
+                        selectedTrack = uiState.selectedTrack,
+                        onTrackSelected = { viewModel.selectTrack(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    ) {
+                        uiState.filteredTimeSlots.forEach { slot ->
+                            item {
+                                Text(
+                                    text = slot.time.ifBlank { "" },
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+                                )
+                            }
+                            if (slot.isBreak) {
+                                item {
+                                    LunchBreakItem(
+                                        label = slot.breakLabel,
+                                        duration = slot.breakDuration,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            } else {
+                                items(slot.sessions) { session ->
+                                    ScheduleItem(
+                                        title = session.title,
+                                        abstract = session.abstract,
+                                        room = session.room,
+                                        time = session.duration,
+                                        category = session.category.label,
+                                        categoryContainerColor = session.category.containerColor,
+                                        categoryContentColor = session.category.contentColor,
+                                        borderColor = session.category.borderColor,
+                                        speakers = session.speakers,
+                                        isFavorite = uiState.favoriteTitles.contains(session.title),
+                                        onFavoriteClick = { viewModel.toggleFavorite(session.title) },
+                                        onClick = {},
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -230,40 +257,28 @@ fun ScheduleScreen(
 private fun CalendarStrip(
     month: String,
     days: List<CalendarDay>,
+    onDayClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
             modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
         ) {
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Previous week",
-                )
-            }
             Text(
                 text = month,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
             )
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Next week",
-                )
-            }
         }
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxWidth(),
         ) {
             days.forEach { day ->
-                CalendarDayCell(day = day)
+                CalendarDayCell(day = day, onClick = { onDayClick(day.date) })
             }
         }
     }
@@ -272,6 +287,7 @@ private fun CalendarStrip(
 @Composable
 private fun CalendarDayCell(
     day: CalendarDay,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -296,7 +312,7 @@ private fun CalendarDayCell(
                     if (day.isSelected) MaterialTheme.colorScheme.primary
                     else Color.Transparent
                 )
-                .clickable {},
+                .clickable { onClick() },
         ) {
             Text(
                 text = day.dayNumber.toString(),

@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -27,10 +25,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 
 @Composable
 fun ScheduleItem(
@@ -42,7 +44,7 @@ fun ScheduleItem(
     categoryContainerColor: Color,
     categoryContentColor: Color,
     borderColor: Color,
-    speakers: List<String>,
+    speakers: List<SpeakerSummaryUi>,
     isFavorite: Boolean,
     modifier: Modifier = Modifier,
     onFavoriteClick: () -> Unit,
@@ -54,17 +56,19 @@ fun ScheduleItem(
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier,
     ) {
-        Row {
-            Box(
-                modifier = Modifier
-                    .width(6.dp)
-                    .fillMaxHeight()
-                    .background(borderColor)
-            )
-            Column(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .drawBehind {
+                    drawLine(
+                        color = borderColor,
+                        start = Offset(0f, 0f),
+                        end = Offset(0f, size.height),
+                        strokeWidth = 6.dp.toPx(),
+                    )
+                }
+                .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp)
+        ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -114,11 +118,11 @@ fun ScheduleItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         speakers.take(2).forEach { speaker ->
-                            SpeakerAvatar(name = speaker)
+                            SpeakerAvatar(name = speaker.name, photoUrl = speaker.photoUrl)
                         }
                         if (speakers.size == 1) {
                             Text(
-                                text = speakers.first(),
+                                text = speakers.first().name,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -128,11 +132,11 @@ fun ScheduleItem(
             }
         }
     }
-}
 
 @Composable
 private fun SpeakerAvatar(
     name: String,
+    photoUrl: String,
     modifier: Modifier = Modifier,
 ) {
     val initials = name.split(" ")
@@ -146,10 +150,19 @@ private fun SpeakerAvatar(
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.secondaryContainer),
     ) {
-        Text(
-            text = initials,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
+        if (photoUrl.isNotBlank()) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
+            Text(
+                text = initials,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
     }
 }

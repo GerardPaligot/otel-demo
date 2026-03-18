@@ -1,37 +1,57 @@
 package com.paligot.otel.demo
 
 import android.app.Application
+import android.os.Build
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import com.paligot.otel.demo.lifecycle.AppStartupLifecycle
+import com.paligot.otel.demo.lifecycle.JankDetectionLifecycle
+import dagger.hilt.android.HiltAndroidApp
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
 import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
-import io.opentelemetry.context.propagation.ContextPropagators
-import io.opentelemetry.exporter.logging.LoggingSpanExporter
-import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.sdk.resources.Resource
-import io.opentelemetry.sdk.trace.SdkTracerProvider
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
+import io.opentelemetry.instrumentation.ktor.v3_0.KtorClientTelemetry
+import javax.inject.Inject
 
-class MainApplication : Application() {
-    lateinit var openTelemetry: OpenTelemetry
+@HiltAndroidApp
+class MainApplication : Application(), SingletonImageLoader.Factory {
+    @Inject lateinit var openTelemetry: OpenTelemetry
+    var currentScreen: String = "unknown"
 
     override fun onCreate() {
         super.onCreate()
-        openTelemetry = openTelemetry()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            registerActivityLifecycleCallbacks(
+                AppStartupLifecycle(
+                    context = this,
+                    openTelemetry = openTelemetry,
+                )
+            )
+        }
+        registerActivityLifecycleCallbacks(
+            JankDetectionLifecycle(
+                openTelemetry = openTelemetry,
+                currentScreen = { currentScreen },
+            )
+        )
     }
 
-    private fun openTelemetry(): OpenTelemetry {
-        val logExporter = LoggingSpanExporter.create()
-        val serviceNameResource =
-            Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "com.decathlon.otel-demo"))
-        val tracerProvider = SdkTracerProvider.builder()
-            .addSpanProcessor(SimpleSpanProcessor.create(logExporter))
-            .setResource(Resource.getDefault().merge(serviceNameResource))
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components {
+                add(
+                    KtorNetworkFetcherFactory(
+                        httpClient = {
+                            HttpClient(CIO) {
+                                install(KtorClientTelemetry) {
+                                    setOpenTelemetry(openTelemetry)
+                                }
+                            }
+                        }
+                    )
+                )
+            }
             .build()
-        return OpenTelemetrySdk
-            .builder()
-            .setTracerProvider(tracerProvider)
-            .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-            .build()
-    }
 }

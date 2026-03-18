@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,14 +37,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import androidx.navigation.NavController
 import com.paligot.otel.demo.schedules.AppBottomBar
 import com.paligot.otel.demo.schedules.BottomNavItem
@@ -62,6 +66,7 @@ data class SpeakerUi(
     val featuredCategory: String = "",
     val avatarColor: Color = Color(0xFF3F51B5),
     val isBookmarked: Boolean = false,
+    val photoUrl: String = "",
 )
 
 // ── Sample data ───────────────────────────────────────────────────────────────
@@ -75,7 +80,7 @@ data class SpeakerUi(
 fun SpeakersScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: SpeakersViewModel = viewModel(),
+    viewModel: SpeakersViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -83,18 +88,6 @@ fun SpeakersScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navController.navigate(BottomNavItem.SCHEDULE.route) {
-                            launchSingleTop = true
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
                 title = {
                     Text(
                         text = "Speakers",
@@ -109,52 +102,77 @@ fun SpeakersScreen(
             )
         },
     ) { innerPadding ->
-        LazyColumn(
-            contentPadding = innerPadding,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            // Search bar
-            item {
-                SearchBar(
-                    query = uiState.searchQuery,
-                    onQueryChange = { viewModel.onSearchQueryChange(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+        when {
+            uiState.isLoading -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-
-            // Featured speakers horizontal carousel
-            item {
-                FeaturedSpeakersRow(
-                    speakers = uiState.featuredSpeakers,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            uiState.error != null -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    Text(
+                        text = "Failed to load speakers\n${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
+            else -> {
+                LazyColumn(
+                    contentPadding = innerPadding,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // Search bar
+                    item {
+                        SearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.onSearchQueryChange(it) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
 
-            // "All Speakers" header
-            item {
-                Text(
-                    text = "All Speakers",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
+                    // Featured speakers horizontal carousel
+                    item {
+                        FeaturedSpeakersRow(
+                            speakers = uiState.featuredSpeakers,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // "All Speakers" header
+                    item {
+                        Text(
+                            text = "All Speakers",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
+                    }
+
+                    // Speaker list
+                    items(uiState.filteredSpeakers) { speaker ->
+                        SpeakerListItem(
+                            speaker = speaker,
+                            isBookmarked = uiState.bookmarkedNames.contains(speaker.name),
+                            onBookmarkClick = { viewModel.toggleBookmark(speaker.name) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
+
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                }
             }
-
-            // Speaker list
-            items(uiState.filteredSpeakers) { speaker ->
-                SpeakerListItem(
-                    speaker = speaker,
-                    isBookmarked = uiState.bookmarkedNames.contains(speaker.name),
-                    onBookmarkClick = { viewModel.toggleBookmark(speaker.name) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(8.dp)) }
         }
     }
 }
@@ -232,19 +250,28 @@ private fun FeaturedSpeakerCard(
             .width(200.dp)
             .height(260.dp),
     ) {
-        // Photo placeholder
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(speaker.avatarColor),
-        ) {
-            Text(
-                text = initials,
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White.copy(alpha = 0.3f),
-                fontWeight = FontWeight.Bold,
+        // Photo
+        if (speaker.photoUrl.isNotBlank()) {
+            AsyncImage(
+                model = speaker.photoUrl,
+                contentDescription = speaker.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
             )
+        } else {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(speaker.avatarColor),
+            ) {
+                Text(
+                    text = initials,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White.copy(alpha = 0.3f),
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
 
         // Gradient overlay at bottom
@@ -316,12 +343,21 @@ private fun SpeakerListItem(
                     .clip(CircleShape)
                     .background(speaker.avatarColor),
             ) {
-                Text(
-                    text = initials,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                if (speaker.photoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = speaker.photoUrl,
+                        contentDescription = speaker.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                } else {
+                    Text(
+                        text = initials,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
 
             // Name, role, topics
